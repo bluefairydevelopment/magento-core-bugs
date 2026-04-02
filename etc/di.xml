@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!--
+        Fix: Magento\Theme\Ui\Component\Design\Config\DataProvider uses
+        $connection->getTableName() which does NOT apply the table prefix in
+        Magento 2.4.x. Replaced with $resourceConnection->getTableName() which
+        correctly prepends the configured table prefix.
+        See: BlueFairy/CoreBugs README.md — Bug #1
+    -->
+    <preference for="Magento\Theme\Ui\Component\Design\Config\DataProvider"
+                type="BlueFairy\CoreBugs\Ui\Component\Design\Config\DataProvider"/>
+</config>

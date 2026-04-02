@@ -1,0 +1,17 @@
+{
+    "name": "bluefairy/module-core-bugs",
+    "description": "Preferences and patches for confirmed Magento core bugs",
+    "type": "magento2-module",
+    "require": {
+        "magento/framework": "^2.4",
+        "magento/module-theme": "*"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "BlueFairy\\CoreBugs\\": ""
+        }
+    }
+}
