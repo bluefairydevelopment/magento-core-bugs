@@ -8,7 +8,7 @@
  */
 declare(strict_types=1);
 
-namespace BlueFairy\Ui\Component\Design\Config;
+namespace BlueFairy\CoreBugs\Ui\Component\Design\Config;
 
 use Magento\Framework\Api\FilterBuilder;
 use Magento\Framework\Api\Search\ReportingInterface;
@@ -17,7 +17,6 @@ use Magento\Framework\App\ObjectManager;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Store\Model\StoreManagerInterface;
-use function BlueFairy\CoreBugs\Ui\Component\Design\Config\__;
 
 /**
  * Overrides core DataProvider to fix table prefix not being applied.
