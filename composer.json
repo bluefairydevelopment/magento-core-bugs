@@ -3,7 +3,7 @@
     "description": "Preferences and patches for confirmed Magento core bugs",
     "type": "magento2-module",
     "require": {
-        "magento/framework": "^2.4",
+        "magento/framework": "^100.0.2",
         "magento/module-theme": "*"
     },
     "autoload": {
