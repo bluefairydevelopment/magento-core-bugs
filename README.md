@@ -122,4 +122,63 @@ Replace `mgh0_` with your actual table prefix. This view must be recreated if th
 
 ---
 
+## Bug #2 — SetLinkStatusObserver crashes on a null order-item id
+
+**Module affected:** `magento/module-downloadable`
+**Class affected:** `Magento\Downloadable\Observer\SetLinkStatusObserver`
+**Method affected:** `execute()`
+**Magento versions affected:** 2.4.9, module-downloadable 100.4.9 (confirmed on PHP 8.4/8.5)
+**Reported:** 2026-09-05 ([M2MAP-190](https://bluefairydevelopment.atlassian.net/browse/M2MAP-190))
+
+### Symptom
+
+Placing ANY order that contains a downloadable product item fails. The storefront checkout hangs on the payment step; the underlying REST call returns a generic error that names nothing:
+
+```
+POST /rest/default/V1/carts/mine/payment-information -> 400
+{"message":"A server error stopped your order from being placed. Please try to place your order again."}
+```
+
+The transaction rolls back cleanly — no order is created, no card is charged for a lost order — but no customer can complete a purchase containing a downloadable item.
+
+### Root Cause
+
+`execute()` runs on the `sales_order_save_after` event, during order placement. In its default branch (the one every normal, non-held/non-canceled order takes):
+
+```php
+// vendor/magento/module-downloadable/Observer/SetLinkStatusObserver.php:119
+$downloadableItemsStatuses[$item->getId()] = $linkStatuses['avail'];
+```
+
+`$item->getId()` is `null` at this point in the order-placement lifecycle for this Magento/PHP combination. PHP 8.1+ deprecates using `null` as an array offset, and this Magento instance's registered error handler (`Magento\Framework\App\ErrorHandler`) promotes that deprecation to a fatal `Exception`, which propagates all the way up through `OrderRepository::save()` → `OrderService::place()` → `QuoteManagement::submit()` → the REST controller, surfacing as the generic 400 above. Confirmed directly from `exception.log`:
+
+```
+main.CRITICAL: Exception: Deprecated Functionality: Using null as an array
+offset is deprecated, use an empty string instead in .../SetLinkStatusObserver.php on line 119
+```
+
+The core class already recognizes this exact hazard — its canceled/closed/complete branch guards it:
+
+```php
+$itemId = $item->getId();
+if ($itemId !== null) {
+    $downloadableItemsStatuses[$itemId] = $linkStatuses['expired'];
+    // ...
+}
+```
+
+— but the same guard is missing from the other three branches, including the default one every normal order takes.
+
+### Fix
+
+`BlueFairy\CoreBugs\Observer\Downloadable\SetLinkStatusObserver` is declared as a DI preference over the core class via `etc/di.xml`. Magento resolves event observers through the object manager, so a `<preference>` substitutes the whole class here exactly as it would for any other DI-resolved dependency — no `events.xml` changes needed.
+
+Because `execute()` is one large method with no smaller piece to override cleanly, it is fully reimplemented, applying the same `$itemId !== null` guard the core class already uses in its one defended branch consistently across all of them, rather than patching only the single line that happens to crash today.
+
+### Workaround (no code change)
+
+None practical — this fires on every order placement that includes a downloadable item; there is no admin config to route around it.
+
+---
+
 *Add new bugs below this line following the same format.*

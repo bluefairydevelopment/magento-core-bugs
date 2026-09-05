@@ -4,6 +4,7 @@
     <module name="BlueFairy_CoreBugs">
         <sequence>
             <module name="Magento_Theme"/>
+            <module name="Magento_Downloadable"/>
         </sequence>
     </module>
 </config>

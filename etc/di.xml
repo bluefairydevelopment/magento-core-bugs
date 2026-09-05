@@ -10,4 +10,16 @@
     -->
     <preference for="Magento\Theme\Ui\Component\Design\Config\DataProvider"
                 type="BlueFairy\CoreBugs\Ui\Component\Design\Config\DataProvider"/>
+    <!--
+        Fix: Magento\Downloadable\Observer\SetLinkStatusObserver uses
+        $item->getId() as an array key without a null guard in three of its
+        four branches (only the canceled/closed/complete branch guards it).
+        $item->getId() is null there during normal order placement on this
+        Magento/PHP combination, and PHP 8.1+'s null-array-offset deprecation
+        gets promoted to a fatal Exception by Magento's own error handler,
+        aborting every order that contains a downloadable item.
+        See: BlueFairy/CoreBugs README.md — Bug #2, M2MAP-190
+    -->
+    <preference for="Magento\Downloadable\Observer\SetLinkStatusObserver"
+                type="BlueFairy\CoreBugs\Observer\Downloadable\SetLinkStatusObserver"/>
 </config>

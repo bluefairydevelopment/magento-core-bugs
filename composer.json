@@ -4,7 +4,10 @@
     "type": "magento2-module",
     "require": {
         "magento/framework": "*",
-        "magento/module-theme": "*"
+        "magento/module-theme": "*",
+        "magento/module-downloadable": "*",
+        "magento/module-sales": "*",
+        "magento/module-store": "*"
     },
     "autoload": {
         "files": [
