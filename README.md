@@ -181,4 +181,125 @@ None practical — this fires on every order placement that includes a downloada
 
 ---
 
+## Bug #3 — Full-page cache permanently saves no-store headers instead of public ones
+
+**Module affected:** `magento/module-page-cache`
+**Class affected:** `Magento\Framework\App\PageCache\Kernel`
+**Method affected:** `process()`
+**Magento versions affected:** 2.4.9 (confirmed stock, zero custom modules, both Hyvä and Luma themes)
+**Reported:** 2026-10-23 ([magento/magento2#41643](https://github.com/magento/magento2/issues/41643))
+
+### Symptom
+
+Every response, on every page, carries:
+
+```
+Cache-Control: max-age=0, must-revalidate, no-cache, no-store
+```
+
+— even on pages the full-page cache (FPC) itself reports as a HIT
+(`X-Magento-Tags`/`X-Magento-Cache-Debug: HIT`), even with
+`system/full_page_cache/caching_application` correctly set to Built-in,
+and even with no exceptions in `exception.log`. The save/load cycle
+genuinely works — a second request for the same identifier finds the
+earlier entry — but the response the browser actually receives is
+uncacheable regardless.
+
+### Root Cause
+
+`Kernel::process()` is called once per cache-miss request, after layout
+generation has already marked the response cacheable
+(`Magento\PageCache\Model\Layout\LayoutPlugin::afterGenerateElements()`
+calls `$response->setPublicHeaders()`, which is what the `preg_match`
+below is detecting):
+
+```php
+// vendor/magento/framework/App/PageCache/Kernel.php:154
+public function process(\Magento\Framework\App\Response\Http $response)
+{
+    $cacheControlHeader = $response->getHeader('Cache-Control');
+    if ($cacheControlHeader
+        && preg_match('/public.*s-maxage=(\d+)/', $cacheControlHeader->getFieldValue(), $matches)
+    ) {
+        $maxAge = (int) $matches[1];
+        $response->setNoCacheHeaders();                    // <-- (A) overwrites Cache-Control on $response
+        if (/* 200/404, cacheable, GET/HEAD */) {
+            // ...
+            $this->fullPageCache->save(
+                $this->serializer->serialize($this->getPreparedData($response)),  // <-- (B) reads $response AFTER (A)
+                $this->identifierForSave->getValue(),
+                $tags,
+                $maxAge
+            );
+        }
+    }
+}
+
+private function getPreparedData(\Magento\Framework\App\Response\Http $response)
+{
+    return [
+        'content' => $response->getContent(),
+        'status_code' => $response->getStatusCode(),
+        'headers' => $response->getHeaders()->toArray(),   // <-- already no-store by the time this runs
+        'context' => $this->context->toArray()
+    ];
+}
+```
+
+`setNoCacheHeaders()` at (A) is correct and necessary — the response
+being sent out for THIS request, a cache miss, must not itself be
+served from or marked for a shared cache. The bug is that
+`getPreparedData()` at (B) reads headers from that SAME `$response`
+object, after (A) has already overwritten them. The data structure
+serialized and handed to `fullPageCache->save()` therefore captures the
+no-store state, not the public state the page was generated with.
+
+`buildResponse()`, called from `load()` on a later cache HIT, replays
+that saved header array verbatim onto a freshly built response object
+(`foreach ($responseData['headers'] as $headerKey => $headerValue) { $response->setHeader(...); }`).
+It behaves correctly given its input — the input itself is wrong. Every
+cache entry this method ever saves carries `no-store`, by construction,
+regardless of theme, module configuration, or page type.
+
+Confirmed via live diagnostic instrumentation
+(`error_log($msg, 3, '/absolute/path')`, added to a local copy, linted,
+deployed, reverted) tracing the full save→load→buildResponse→launch
+chain on `hyvastaging.bluefairydevelopment.com`, then reproduced from
+scratch on a vanilla Magento 2.4.9 install
+(`~/Sites/magento-vanilla`) with zero BlueFairy modules installed,
+under both `hyva-themes/magento2-default-theme` and stock `Magento/luma`
+— ruling out this estate's code, configuration, and theme entirely.
+
+### Fix
+
+`BlueFairy\CoreBugs\App\PageCache\Kernel` is declared as a DI preference
+over the core class via `etc/di.xml`.
+
+`process()` and the constructor are fully reimplemented — `process()`
+because it is the method with the bug and has no smaller piece that can
+be overridden in isolation; the constructor because the dependencies
+`process()` needs (`fullPageCache`, `serializer`, `context`, `state`,
+`identifierForSave`, `cookieDisabler`) are declared `private` on the
+parent and are not visible to a subclass, so this class takes the
+identical constructor signature and keeps its own copies. `load()` and
+`buildResponse()` are untouched and run exactly as inherited.
+
+The fix itself is a single reordering: the prepared-data snapshot is
+captured immediately after the `Set-Cookie`/`X-Magento-Tags` clearing
+and the cacheability save that the core class already performs at that
+point, and `setNoCacheHeaders()` is moved to run last, after the save.
+Every other side effect — the cookie/tag clearing, the cookie disabler,
+the save's guard conditions and arguments — happens in the exact same
+order as the core class. The live response sent for the current
+request is still marked no-store, exactly as before; only the snapshot
+written to the cache store differs.
+
+### Workaround (no code change)
+
+None practical short of disabling the built-in FPC entirely
+(`system/full_page_cache/caching_application` = Varnish, or FPC off),
+which forgoes page caching altogether rather than fixing it.
+
+---
+
 *Add new bugs below this line following the same format.*

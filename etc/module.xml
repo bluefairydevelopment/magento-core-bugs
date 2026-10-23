@@ -5,6 +5,7 @@
         <sequence>
             <module name="Magento_Theme"/>
             <module name="Magento_Downloadable"/>
+            <module name="Magento_PageCache"/>
         </sequence>
     </module>
 </config>

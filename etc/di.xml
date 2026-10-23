@@ -22,4 +22,19 @@
     -->
     <preference for="Magento\Downloadable\Observer\SetLinkStatusObserver"
                 type="BlueFairy\CoreBugs\Observer\Downloadable\SetLinkStatusObserver"/>
+    <!--
+        Fix: Magento\Framework\App\PageCache\Kernel::process() calls
+        $response->setNoCacheHeaders() BEFORE the private getPreparedData()
+        snapshots $response->getHeaders()->toArray() for the full-page-cache
+        save — both calls read/write the SAME response object, so every
+        saved cache entry permanently gets the no-store headers meant only
+        for the live cache-miss response, and buildResponse() faithfully
+        replays that no-store snapshot on every later cache HIT. Confirmed
+        as stock Magento 2.4.9 core behaviour on a from-scratch install with
+        zero custom modules and no custom theme.
+        See: BlueFairy/CoreBugs README.md — Bug #3,
+        https://github.com/magento/magento2/issues/41643
+    -->
+    <preference for="Magento\Framework\App\PageCache\Kernel"
+                type="BlueFairy\CoreBugs\App\PageCache\Kernel"/>
 </config>
