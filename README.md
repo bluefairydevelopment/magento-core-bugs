@@ -302,4 +302,64 @@ which forgoes page caching altogether rather than fixing it.
 
 ---
 
+## Bug #4 — Product page "Only X left" block throws for a SKU not assigned to the website's stock
+
+**Module affected:** `magento/module-inventory-sales-frontend-ui` (MSI)
+**Class affected:** `Magento\InventorySalesFrontendUi\Plugin\Block\Stockqty\AbstractStockqtyPlugin`
+**Method affected:** `aroundIsMsgVisible()`
+**Magento versions affected:** 2.4.9 with MSI (confirmed on shop.bluedragonhollow.com, PHP 8.5)
+**Reported:** upstream 2026-10-18 by another contributor
+([magento/inventory#3474](https://github.com/magento/inventory/issues/3474); fix PR
+[magento/inventory#3475](https://github.com/magento/inventory/pull/3475)); found on our store 2026-10-26
+
+### Symptom
+
+On a store whose website is served by a custom stock, every product page for a SKU that has no source
+item on that stock's sources logs
+
+```
+main.CRITICAL: Magento\InventoryConfigurationApi\Exception\SkuIsNotAssignedToStockException:
+The requested sku is not assigned to given stock.
+```
+
+drops the stock block, and is **never saved to the full page cache**: every request is served
+`Cache-Control: no-store` and rebuilt from scratch. On shop.bluedragonhollow.com on 2026-10-26 (stock
+"The Farm" serving the main website; 85 simple, 20 configurable and 1 bundle product not assigned to
+its source), an affected product page returned `no-store` on three requests in a row while an assigned
+product page was cached after the first.
+
+### Root Cause
+
+`aroundIsMsgVisible()` asks `GetStockItemConfigurationInterface::execute($sku, $stockId)` for the SKU's
+configuration on the website's stock before checking the product type or Manage Stock, and does not
+handle `SkuIsNotAssignedToStockException`, which that service throws by contract for a SKU with no
+source item on the stock. The layout renders the stock block as a non-cached element, catches the
+exception, logs it, and the failed render marks the page as not cacheable.
+
+### Fix
+
+`BlueFairy\CoreBugs\Plugin\InventorySalesFrontendUi\AbstractStockqtyPlugin` is declared as a DI
+preference over the MSI plugin class via `etc/di.xml` (a plugin is instantiated through the object
+manager, so a preference substitutes it). It extends the MSI class and wraps `aroundIsMsgVisible()` in a
+`try`/`catch` for `SkuIsNotAssignedToStockException` only, returning `false`: the message is not shown,
+which is what the page would show for a SKU the stock does not hold. Any other exception still
+propagates. This is the same behaviour as upstream PR #3475; remove this preference once that is in
+every store's Magento release.
+
+The preference is inert where `Magento_InventorySalesFrontendUi` is disabled (hyva and hyvastaging
+today), because nothing then asks for the MSI plugin. It does need MSI's code in `vendor/`: a store that
+has removed the MSI packages through composer would fail `setup:di:compile` on this class.
+
+**Tests:** `Test/Unit/Plugin/InventorySalesFrontendUi/AbstractStockqtyPluginTest.php` (unassigned SKU
+hides the message; an assigned low-stock SKU still shows it; other exceptions propagate). Run against a
+vanilla install with MSI: `MAGENTO_ROOT=~/Sites/magento-vanilla ~/Sites/magento-vanilla/vendor/bin/phpunit
+-c phpunit.xml.dist`. Removing the `catch` makes the first test fail.
+
+### Workaround (no code change)
+
+Assign every sellable SKU to a source of the website's stock, or disable
+`Magento_InventorySalesFrontendUi` (which also removes the "Only X left" message for every product).
+
+---
+
 *Add new bugs below this line following the same format.*

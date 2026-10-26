@@ -4,6 +4,13 @@
 
 ### Fixed
 
+- **Bug #4 — MSI's product page "Only X left" block threw `SkuIsNotAssignedToStockException` for a SKU
+  not assigned to the website's stock, logging a CRITICAL on every view and keeping the page out of the
+  full page cache.** Affects stores whose website is served by a custom stock (found on
+  shop.bluedragonhollow.com). `BlueFairy\CoreBugs\Plugin\InventorySalesFrontendUi\AbstractStockqtyPlugin`
+  hides the message for such a SKU instead, the same behaviour as upstream
+  [magento/inventory#3475](https://github.com/magento/inventory/pull/3475). See README.md — Bug #4.
+
 - **Bug #3 — `Magento\Framework\App\PageCache\Kernel::process()` saved no-store headers to the
   full-page cache instead of the public ones a page was generated with.** The method calls
   `$response->setNoCacheHeaders()` and only afterwards snapshots `$response->getHeaders()` for

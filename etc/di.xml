@@ -37,4 +37,16 @@
     -->
     <preference for="Magento\Framework\App\PageCache\Kernel"
                 type="BlueFairy\CoreBugs\App\PageCache\Kernel"/>
+    <!--
+        Fix: Magento\InventorySalesFrontendUi\Plugin\Block\Stockqty\AbstractStockqtyPlugin::aroundIsMsgVisible()
+        asks for the SKU's stock item configuration on the website's stock first, which throws
+        SkuIsNotAssignedToStockException for a SKU with no source item on that stock's sources. On a
+        store served by a custom stock, every such product page logs a CRITICAL, drops the stock block
+        and is never saved to the full page cache. The preference catches the exception and hides the
+        message, as magento/inventory#3475 does. Inert where MSI's frontend UI module is disabled.
+        See: BlueFairy/CoreBugs README.md — Bug #4,
+        https://github.com/magento/inventory/issues/3474
+    -->
+    <preference for="Magento\InventorySalesFrontendUi\Plugin\Block\Stockqty\AbstractStockqtyPlugin"
+                type="BlueFairy\CoreBugs\Plugin\InventorySalesFrontendUi\AbstractStockqtyPlugin"/>
 </config>
