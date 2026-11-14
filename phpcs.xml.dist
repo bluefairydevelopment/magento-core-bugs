@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!--
+    Gate 1 coding standard for module-core-bugs. Run from the package root:
+
+        <magento-root>/vendor/bin/phpcs standard=phpcs.xml.dist -q
+
+    (flag name written without its two leading hyphens above, because a literal
+    double hyphen inside an XML comment is rejected by phpcs' parser.)
+
+    Exclusions follow the house ruleset: docblock-format opinions and pure formatting sniffs that
+    phpcbf can rewrite without changing behaviour. Nothing here suppresses a sniff
+    that could hide a real defect; EmptyBlock and DiscouragedFunction are
+    deliberately NOT excluded for that reason.
+-->
+<ruleset name="BlueFairyModuleCoreBugs">
+    <description>Magento 2 coding standard for module-core-bugs.</description>
+
+    <rule ref="Magento2">
+        <exclude name="Magento2.Annotation.MethodAnnotationStructure"/>
+        <exclude name="Magento2.Annotation.MethodArguments"/>
+        <exclude name="Magento2.Commenting.ClassPropertyPHPDocFormatting"/>
+        <exclude name="Magento2.Commenting.ClassAndInterfacePHPDocFormatting"/>
+
+        <exclude name="PSR2.Methods.FunctionCallSignature"/>
+        <exclude name="Squiz.Functions.MultiLineFunctionDeclaration"/>
+        <exclude name="Squiz.WhiteSpace.ScopeClosingBrace"/>
+        <exclude name="Squiz.ControlStructures.ControlSignature"/>
+        <exclude name="PEAR.ControlStructures.ControlSignature"/>
+        <exclude name="Generic.Files.LineLength"/>
+        <exclude name="Magento2.Whitespace.MultipleEmptyLines"/>
+    </rule>
+
+    <file>.</file>
+
+    <exclude-pattern>*/docs/*</exclude-pattern>
+    <exclude-pattern>*/docs-build/*</exclude-pattern>
+    <exclude-pattern>*/.idea/*</exclude-pattern>
+    <exclude-pattern>*/.cache/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+
+    <arg name="extensions" value="php,phtml"/>
+    <arg name="colors"/>
+    <arg value="p"/>
+</ruleset>
