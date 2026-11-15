@@ -100,7 +100,7 @@ class DataProvider extends \Magento\Theme\Ui\Component\Design\Config\DataProvide
 
             $this->addFilter(
                 $this->filterBuilder->setField('store_website_id')
-                    ->setValue($singleStoreWebsite->getId())
+                    ->setValue((string) $singleStoreWebsite->getId())
                     ->create()
             );
             $this->addFilter(
