@@ -1,0 +1,15 @@
+# Static analysis for module-core-bugs. Not run on the owner's Mac; run on a rig.
+parameters:
+    phpVersion: 80300
+    level: 5
+    paths:
+        - App
+        - Observer
+        - Plugin
+        - Ui
+        - registration.php
+    excludePaths:
+        - */Test/*
+    bootstrapFiles:
+        - Test/phpstan-bootstrap.php
+    treatPhpDocTypesAsCertain: false

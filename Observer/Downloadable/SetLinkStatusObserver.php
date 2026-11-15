@@ -54,7 +54,7 @@ class SetLinkStatusObserver extends \Magento\Downloadable\Observer\SetLinkStatus
      */
     public function execute(Observer $observer)
     {
-        $order = $observer->getEvent()->getOrder();
+        $order = $observer->getEvent()->getData('order');
 
         if (!$order->getId()) {
             // order not saved in the database
