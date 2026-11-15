@@ -14,4 +14,4 @@ if (!$root || !is_file($root . '/dev/tests/unit/framework/bootstrap.php')) {
 }
 require $root . '/dev/tests/unit/framework/bootstrap.php';
 $loader = require $root . '/vendor/autoload.php';
-$loader->addPsr4('BlueFairy\\CoreBugs\\', dirname(__DIR__, 2) . '/');
+$loader->addPsr4('BlueFairy\\CoreBugs\\', dirname(__DIR__, 2) . '/', true);
